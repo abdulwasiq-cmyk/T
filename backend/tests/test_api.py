@@ -5,10 +5,20 @@ import main
 
 
 @pytest.fixture()
-def client():
+def anonymous_client():
     # Deliberately not used as a context manager: that would run the startup
     # hooks (cache warmers, cleanup worker) which are not wanted in unit tests.
     return TestClient(main.app)
+
+
+@pytest.fixture()
+def client(anonymous_client):
+    # State-changing /api/ calls need the session CSRF token, exactly like the
+    # real frontend: bootstrap a session, then send the token on later requests.
+    response = anonymous_client.get("/api/seedr/session")
+    assert response.status_code == 200
+    anonymous_client.headers["X-Torrent-Studio-CSRF"] = response.json()["csrfToken"]
+    return anonymous_client
 
 
 class _FakeResponse:
@@ -60,6 +70,16 @@ def test_health(client):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_state_changing_api_calls_require_csrf_token(anonymous_client, feedback_env):
+    response = anonymous_client.post(
+        "/api/feedback",
+        json={"type": "bug", "message": "Something is broken here"},
+    )
+    assert response.status_code == 403
+    assert response.json()["code"] == "SEEDR_CSRF_INVALID"
+    assert _FakeGitHubClient.calls == []
 
 
 def test_cache_report_hidden_unless_debug_enabled(client, monkeypatch):
