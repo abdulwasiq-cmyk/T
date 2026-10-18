@@ -1,0 +1,30 @@
+services:
+  torrent-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: torrent-studio:local
+    container_name: torrent-studio
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-10000}:10000"
+    environment:
+      PORT: "10000"
+      CACHE_ONLY_MODE: "${CACHE_ONLY_MODE:-true}"
+      SEEDR_SESSION_SECRET: "${SEEDR_SESSION_SECRET:?Set SEEDR_SESSION_SECRET in .env}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:10000}"
+    volumes:
+      - torrent_studio_data:/app/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:10000/api/health', timeout=5)"
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  torrent_studio_data:
