@@ -4324,10 +4324,10 @@ export const TorrentSearchPanel: React.FC<TorrentSearchPanelProps> = ({ onPrepar
           <button
             type={isSearching || nexStreamLoading ? 'button' : 'submit'}
             onClick={isSearching || nexStreamLoading ? cancelSearch : undefined}
-            aria-label={isSearching || nexStreamLoading ? 'Cancel search' : 'Search'}
-            title={isSearching || nexStreamLoading ? 'Cancel search' : 'Search'}
+            aria-label={isSearching || nexStreamLoading ? 'Cancel search' : 'Movie Search'}
+            title={isSearching || nexStreamLoading ? 'Cancel search' : 'Movie Search'}
             className={[
-              'group relative isolate overflow-hidden w-10 sm:w-auto min-h-10 px-2.5 sm:px-5 py-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.97]',
+              'group relative isolate overflow-hidden w-auto min-h-10 px-3 sm:px-5 py-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.97]',
               isSearching || nexStreamLoading
                 ? 'border border-rose-300/70 bg-rose-500 text-white shadow-[0_0_0_1px_rgba(244,63,94,0.18),0_0_18px_rgba(244,63,94,0.20)] hover:bg-rose-400 hover:shadow-[0_0_24px_rgba(244,63,94,0.34)] focus-visible:ring-rose-300'
                 : 'border border-cyan-300/60 bg-cyan-400 text-slate-950 shadow-[0_0_0_1px_rgba(34,211,238,0.12)] hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-300 hover:shadow-[0_0_22px_rgba(34,211,238,0.36)] focus-visible:ring-cyan-300'
@@ -4344,11 +4344,11 @@ export const TorrentSearchPanel: React.FC<TorrentSearchPanelProps> = ({ onPrepar
             ) : (
               <>
                 <Search className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                <span className="hidden sm:inline">Search</span>
+                <span>Movie Search</span>
               </>
             )}
           </button>
-          <button type="button" onClick={() => { const trimmed = query.trim(); if (trimmed.length < 2) { setNexStreamError('Enter at least 2 characters to search.'); return; } void searchNexStreamTitles(trimmed, 'tv'); }} className="shrink-0 rounded-xl border border-violet-400/60 bg-violet-500/15 px-3 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/25">NexStream TV</button>
+          <button type="button" onClick={() => { const trimmed = query.trim(); if (trimmed.length < 2) { setNexStreamError('Enter at least 2 characters to search.'); return; } void searchNexStreamTitles(trimmed, 'tv'); }} className="shrink-0 rounded-xl border border-violet-400/60 bg-violet-500/15 px-3 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/25">Series Search</button>
         </form>
 
         <div className="mt-2 flex flex-wrap gap-2" aria-label="Movie catalogues">
