@@ -105,6 +105,61 @@ SEEDR_API_TOKEN=<developer Seedr token>
 
 Do not enable the legacy mode for the normal multi-user deployment.
 
+## Run with Docker
+
+The repository includes a root-level `Dockerfile` and `docker-compose.yml`. Docker builds the Vite frontend, installs the FastAPI backend requirements, prepares bundled catalogue pages, and serves the frontend and API from one container on port `10000`.
+
+### Prerequisites
+
+- Docker Engine with the Docker Compose plugin
+- The source folders `backend/` and `frontend/` in the repository root
+
+### Start
+
+Create a local `.env` file from the example and set a stable session secret:
+
+```bash
+cp .env.example .env
+```
+
+Set `SEEDR_SESSION_SECRET` in `.env` to a long random value. You can generate one with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Then build and start Torrent Studio:
+
+```bash
+docker compose up --build -d
+```
+
+Open [http://localhost:10000](http://localhost:10000). The API health endpoint is [http://localhost:10000/api/health](http://localhost:10000/api/health).
+
+Useful commands:
+
+```bash
+# Follow application logs
+docker compose logs -f torrent-studio
+
+# Check service status
+docker compose ps
+
+# Stop the service (preserves the named data volume)
+docker compose down
+
+# Stop and remove the persistent data volume too
+docker compose down -v
+```
+
+By default, Compose maps host port `10000` to container port `10000` and sets `CACHE_ONLY_MODE=true`. To use another host port, set `HOST_PORT` in `.env`, for example `HOST_PORT=10001`. Keep `.env` private: never commit API keys, session secrets, or other credentials.
+
+The named `torrent_studio_data` volume persists the app's `/app/data` directory across container recreation. Catalogue seed files are bundled into the image at build time, so rebuild the image after changing source catalogues or poster mappings.
+
+### Run without Docker
+
+For frontend/backend development with hot reload, use the existing [Local development](#local-development) instructions below.
+
 ## Local development
 
 Backend:
