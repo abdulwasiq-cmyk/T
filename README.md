@@ -1,6 +1,6 @@
 # Torrent Studio
 
-A self-hostable movie and series discovery app built to run as **one Docker web service on Render**. The React/Vite frontend is compiled into static files and served by the FastAPI backend, so you don't need separate frontend hosting, a database service, or a Vercel deployment.
+A self-hostable movie and series discovery app built to run as **one Docker web service on Render**. The React/Vite frontend is compiled into static files and served by the FastAPI backend, so you don't need separate frontend hosting, a database service.
 
 > **Deployment goal:** keep the production setup simple and cache-first, so a small app can serve catalogue pages without making a live metadata request for every card.
 
