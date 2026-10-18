@@ -1,0 +1,8 @@
+.git
+**/.venv
+**/venv
+**/node_modules
+**/__pycache__
+scan.log
+scan2.log
+poster_map_failures.txt
