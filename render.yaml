@@ -2,7 +2,7 @@ services:
   - type: web
     name: new-test
     runtime: docker
-    repo: https://github.com/wroxtaaar/new-test
+    repo: https://github.com/wroxtaaar/Torrent-Studio
     branch: main
     plan: free
     region: singapore

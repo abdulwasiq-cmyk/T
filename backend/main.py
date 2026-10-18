@@ -322,6 +322,21 @@ SEEDR_DEVICE_CODE_URL = "https://www.seedr.cc/api/device/code"
 SEEDR_DEVICE_AUTHORIZE_URL = "https://www.seedr.cc/api/device/authorize"
 SEEDR_SESSION_COOKIE = os.getenv("SEEDR_SESSION_COOKIE", "torrent_studio_seedr_session").strip() or "torrent_studio_seedr_session"
 SEEDR_SESSION_TTL_SECONDS = int(float(os.getenv("SEEDR_SESSION_TTL_SECONDS", str(30 * 24 * 60 * 60))))
+# The bundled frontend is served from the same origin, so Lax is enough and gives
+# better CSRF protection. Set SEEDR_SESSION_SAMESITE=none only if the frontend is
+# hosted on a different origin (and list that origin in CORS_ORIGINS).
+SEEDR_SESSION_SAMESITE = os.getenv("SEEDR_SESSION_SAMESITE", "lax").strip().lower()
+if SEEDR_SESSION_SAMESITE not in {"lax", "strict", "none"}:
+    SEEDR_SESSION_SAMESITE = "lax"
+# Diagnostic endpoints that reveal server internals are off unless explicitly enabled.
+DEBUG_ENDPOINTS_ENABLED = os.getenv("DEBUG_ENDPOINTS_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+# Simple in-memory sliding-window limiter for the public feedback endpoint.
+FEEDBACK_RATE_LIMIT = int(os.getenv("FEEDBACK_RATE_LIMIT", "5"))
+FEEDBACK_RATE_WINDOW_SECONDS = int(os.getenv("FEEDBACK_RATE_WINDOW_SECONDS", "3600"))
+FEEDBACK_GLOBAL_RATE_LIMIT = int(os.getenv("FEEDBACK_GLOBAL_RATE_LIMIT", "100"))
+_feedback_hits: dict[str, deque] = {}
+_feedback_global_hits: deque = deque()
 SEEDR_SESSION_SECRET = os.getenv("SEEDR_SESSION_SECRET", "").strip()
 if SEEDR_SESSION_SECRET:
     _seedr_fernet_key = base64.urlsafe_b64encode(hashlib.sha256(SEEDR_SESSION_SECRET.encode("utf-8")).digest())
@@ -787,7 +802,7 @@ async def attach_seedr_session(request: Request, call_next):
         max_age=SEEDR_SESSION_TTL_SECONDS,
         httponly=True,
         secure=is_https,
-        samesite="none" if is_https else "lax",
+        samesite=SEEDR_SESSION_SAMESITE if is_https else "lax",
         path="/",
     )
 
@@ -12721,6 +12736,9 @@ def _cache_file_snapshot(name: str, path: Path, *, bundled: bool = False) -> dic
 @app.get("/api/cache/report")
 async def api_cache_report():
     """Inventory saved cache data and report process-local cache/use counters."""
+    if not DEBUG_ENDPOINTS_ENABLED:
+        # Reveals server file paths and internal counters; hidden unless enabled.
+        raise HTTPException(404, "Not found")
     runtime_paths: dict[str, Path] = {
         name: path for name, path in _RUNTIME_CACHE_SEED_FILES.items()
     }
@@ -13319,15 +13337,18 @@ async def seedr_token_diagnostic():
         except Exception as exc:
             return {"ok": False, "status": 0, "code": "LOCAL_ERROR", "message": str(exc)[:200]}
 
-    return {
+    result: dict[str, Any] = {
         "configured": True,
         "code": "SEEDR_TOKEN_PRESENT",
-        "tokenLength": len(token),
-        "tokenFingerprint": fingerprint,
         "checks": {
             "user": await check("/tasks" if _seedr_session_auth_mode(_seedr_request_session_id.get().strip()) == "pat" else "/user"),
         },
     }
+    if DEBUG_ENDPOINTS_ENABLED:
+        # Token metadata is only returned when debugging is explicitly enabled.
+        result["tokenLength"] = len(token)
+        result["tokenFingerprint"] = fingerprint
+    return result
 
 
 @app.get("/api/seedr/auth-status")
@@ -16150,6 +16171,39 @@ async def update_cleanup_settings(body: dict[str, Any]):
 async def run_cleanup():
     return {"bytesFreed": 0, "filesRemoved": 0, "tempRemoved": 0, "orphansRemoved": 0}
 
+def _feedback_client_key(request: Request) -> str:
+    # Render sits behind a proxy; the left-most X-Forwarded-For entry is the client.
+    forwarded = str(request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    return request.client.host if request.client else "unknown"
+
+
+def _enforce_feedback_rate_limit(request: Request) -> None:
+    now = time.monotonic()
+    cutoff = now - FEEDBACK_RATE_WINDOW_SECONDS
+
+    while _feedback_global_hits and _feedback_global_hits[0] < cutoff:
+        _feedback_global_hits.popleft()
+    if len(_feedback_global_hits) >= FEEDBACK_GLOBAL_RATE_LIMIT:
+        raise HTTPException(429, "Feedback is temporarily unavailable. Please try again later.")
+
+    key = _feedback_client_key(request)
+    hits = _feedback_hits.setdefault(key, deque())
+    while hits and hits[0] < cutoff:
+        hits.popleft()
+    if len(hits) >= FEEDBACK_RATE_LIMIT:
+        raise HTTPException(429, "You have sent feedback too many times. Please try again later.")
+
+    hits.append(now)
+    _feedback_global_hits.append(now)
+
+    # Keep the table bounded.
+    if len(_feedback_hits) > 5000:
+        for stale_key in [k for k, v in _feedback_hits.items() if not v or v[-1] < cutoff]:
+            _feedback_hits.pop(stale_key, None)
+
+
 @app.post("/api/feedback")
 async def submit_feedback(body: FeedbackRequest, request: Request):
     feedback_type = str(body.type or "").strip().lower()
@@ -16176,6 +16230,8 @@ async def submit_feedback(body: FeedbackRequest, request: Request):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
         raise HTTPException(500, "Feedback repository is not configured correctly")
 
+    _enforce_feedback_rate_limit(request)
+
     label = {"review": "Review", "suggestion": "Suggestion", "bug": "Bug report"}[feedback_type]
     title_prefix = {"review": "Review", "suggestion": "Suggestion", "bug": "Bug report"}[feedback_type]
     title_text = message.replace("\\n", " ").strip()
@@ -16191,7 +16247,6 @@ async def submit_feedback(body: FeedbackRequest, request: Request):
         title += f" — {name}"
 
     submitted_at = datetime.now(timezone.utc).isoformat()
-    forwarded_for = str(request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
 
     body_lines = [
         f"# {('⭐' * rating + ' ' + str(rating) + '/5 Review') if feedback_type == 'review' and rating is not None else label}",
@@ -16210,9 +16265,7 @@ async def submit_feedback(body: FeedbackRequest, request: Request):
         "",
         f"> {message.replace(chr(10), chr(10) + '> ')}",
     ])
-    if forwarded_for:
-        # Do not persist or expose the visitor IP in the feedback issue.
-        pass
+    # The visitor IP is only used for rate limiting; it is never written to the issue.
 
     headers = {
         "Accept": "application/vnd.github+json",
@@ -16225,7 +16278,7 @@ async def submit_feedback(body: FeedbackRequest, request: Request):
             response = await client.post(
                 f"https://api.github.com/repos/{repo}/issues",
                 headers=headers,
-                json={"title": title, "body": "\\n".join(body_lines)},
+                json={"title": title, "body": "\n".join(body_lines)},
             )
     except httpx.HTTPError as exc:
         logger.warning("Feedback submission failed: %s", exc)
