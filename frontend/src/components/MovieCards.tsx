@@ -680,7 +680,7 @@ export const MoviePrepareCard: React.FC<MoviePrepareCardProps> = ({
                         onClick={directStream.onClick}
                         className="min-w-0 flex-1 whitespace-nowrap rounded-lg border border-violet-400/40 bg-violet-500/15 px-1.5 py-1.5 text-[10px] font-bold text-violet-200 hover:bg-violet-500/25 disabled:opacity-60"
                       >
-                        {directStream.label}
+                        {directStream.label === 'Resolving…' ? <><Loader2 className="inline-block w-3.5 h-3.5 mr-1 animate-spin" />Resolving…</> : <><Play className="inline-block w-3.5 h-3.5 mr-1 fill-current" />Play</>}
                       </button>
                       <div className="shrink-0">
                         <button
