@@ -40,7 +40,29 @@ jobs:
       - name: Type check
         continue-on-error: true
         working-directory: frontend
-        run: npm run lint
+        run: |
+          set -o pipefail
+          npm run lint -- --pretty false 2>&1 | tee "$RUNNER_TEMP/tsc.txt"
+      - name: Type errors 1-10
+        run: bash .github/scripts/ts-annotations.sh 0
+      - name: Type errors 11-20
+        run: bash .github/scripts/ts-annotations.sh 1
+      - name: Type errors 21-30
+        run: bash .github/scripts/ts-annotations.sh 2
+      - name: Type errors 31-40
+        run: bash .github/scripts/ts-annotations.sh 3
+      - name: Type errors 41-50
+        run: bash .github/scripts/ts-annotations.sh 4
+      - name: Type errors 51-60
+        run: bash .github/scripts/ts-annotations.sh 5
+      - name: Type errors 61-70
+        run: bash .github/scripts/ts-annotations.sh 6
+      - name: Type errors 71-80
+        run: bash .github/scripts/ts-annotations.sh 7
+      - name: Type errors 81-90
+        run: bash .github/scripts/ts-annotations.sh 8
+      - name: Type errors 91-100
+        run: bash .github/scripts/ts-annotations.sh 9
       - name: Build
         working-directory: frontend
         run: npm run build
