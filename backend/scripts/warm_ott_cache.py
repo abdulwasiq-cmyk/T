@@ -7,7 +7,7 @@ records. The script preserves the established OTT cache file/schema and keeps
 existing provider data when Watchmode has no usable result for a title.
 
 Run inside the running Home container:
-  docker exec -it home python /app/warm_ott_cache.py
+    docker exec -it home python /app/scripts/warm_ott_cache.py
 No scheduler is installed; this script runs only when explicitly invoked.
 """
 from __future__ import annotations
@@ -15,11 +15,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import main
 
 

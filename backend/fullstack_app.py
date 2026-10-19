@@ -10,7 +10,16 @@ from fastapi import HTTPException
 from fastapi.responses import FileResponse
 
 from main import app
+from catalogues.poster_service import router as poster_router
 from nexstream import router as nexstream_router
+
+# FastAPI keeps included routers lazy, so remove this API-only root route from
+# its owner before the router is expanded into the full-stack application.
+poster_router.routes[:] = [
+    route
+    for route in poster_router.routes
+    if not (getattr(route, "path", None) == "/" and getattr(route, "name", None) == "root")
+]
 
 app.include_router(nexstream_router)
 

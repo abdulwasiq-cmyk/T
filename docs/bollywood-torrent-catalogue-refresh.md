@@ -10,7 +10,7 @@ selected 1–5 GiB maximum and returns every valid cached release for each title
 Run inside the deployed backend container:
 
 ```sh
-python /app/refresh_bollywood_torrent_catalogue.py
+python /app/scripts/refresh_bollywood_torrent_catalogue.py
 ```
 
 Each run checks a bounded batch (150 titles by default), then atomically writes the
@@ -22,7 +22,7 @@ rechecks stale matched titles.
 To tune a run without changing the code:
 
 ```sh
-BOLLYWOOD_TORRENT_REFRESH_BATCH_SIZE=300 python /app/refresh_bollywood_torrent_catalogue.py
+BOLLYWOOD_TORRENT_REFRESH_BATCH_SIZE=300 python /app/scripts/refresh_bollywood_torrent_catalogue.py
 ```
 
 The metadata input defaults to

@@ -25,7 +25,7 @@ COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./
-RUN python build_catalogue_pages.py /app/cache-seed
+RUN python scripts/build_catalogue_pages.py /app/cache-seed
 COPY search_limits.json ./
 COPY --from=frontend-build /frontend/dist ./frontend-dist
 

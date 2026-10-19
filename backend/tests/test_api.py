@@ -91,6 +91,51 @@ def test_session_cookie_defaults_to_lax():
     assert main.SEEDR_SESSION_SAMESITE == "lax"
 
 
+def test_search_rules_remain_available_through_main():
+    query = "SpiderMan Hindi 2021"
+    assert main._media_provider_query(query) == "spider man"
+    assert main._media_search_parts("The Batman S02E03") == ("The Batman", 2, 3)
+    assert main._search_quality_filter(
+        {
+            "title": "Spider-Man Hin 2021 1080p",
+            "size": main.MIN_SEARCH_RESULT_SIZE_BYTES,
+        },
+        query,
+    )
+
+
+def test_torrent_search_route_returns_mocked_provider_results(anonymous_client, monkeypatch):
+    query = "SearchRegressionTitle"
+    main._search_cache.pop(main._search_cache_key(query), None)
+
+    async def fake_1337x(_query, **_kwargs):
+        return [
+            {
+                "title": f"{query} release {index} 1080p",
+                "size": 300 * 1024 * 1024,
+                "seeders": 100 - index,
+                "leechers": 1,
+                "indexer": "test",
+            }
+            for index in range(8)
+        ]
+
+    async def no_results(*_args, **_kwargs):
+        return []
+
+    monkeypatch.setattr(main, "search_1337x_direct", fake_1337x)
+    monkeypatch.setattr(main, "search_limetorrents", no_results)
+    monkeypatch.setattr(main, "search_knaben", no_results)
+    monkeypatch.setattr(main, "search_yts_movies", no_results)
+    monkeypatch.setattr(main, "_poster_url_for_release", lambda _title: "")
+
+    response = anonymous_client.get("/api/search", params={"q": query, "limit": 50})
+
+    assert response.status_code == 200
+    assert len(response.json()) == 8
+    assert all(item["title"].startswith(query) for item in response.json())
+
+
 def test_feedback_rejects_invalid_type(client, feedback_env):
     assert _feedback(client, type="spam").status_code == 400
 

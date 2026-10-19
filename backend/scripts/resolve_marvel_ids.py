@@ -5,7 +5,7 @@ This script only queries TMDB and writes a separate review manifest. It does not
 call Watchmode and does not read, clear, or modify the OTT availability cache.
 
 Run inside the Home container:
-  docker exec -it home python /app/resolve_marvel_ids.py
+    docker exec -it home python /app/scripts/resolve_marvel_ids.py
 """
 from __future__ import annotations
 
@@ -14,9 +14,12 @@ import asyncio
 import json
 import logging
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import main
 

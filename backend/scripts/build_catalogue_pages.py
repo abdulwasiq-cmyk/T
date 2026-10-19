@@ -11,7 +11,7 @@ from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-SEED = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).parent / "cache-seed")
+SEED = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[1] / "cache-seed")
 PAGE_SIZE = 18
 SOURCES = {
     "marvel": "marvel_catalogue.json",

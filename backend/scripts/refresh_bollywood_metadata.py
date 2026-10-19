@@ -124,7 +124,7 @@ def main() -> int:
         print("ERROR: No TMDB read-access token found. Set TMDB_READ_ACCESS_TOKENS or TMDB_READ_ACCESS_TOKEN in the container environment.", file=sys.stderr)
         return 2
 
-    base_dir = Path(__file__).resolve().parent
+    base_dir = Path(__file__).resolve().parents[1]
     seed_path = Path(os.getenv("BOLLYWOOD_HISTORICAL_SEED", str(base_dir / "cache-seed" / "bollywood_imdb_historical_metadata.json")))
     output_path = Path(os.getenv("BOLLYWOOD_METADATA_OUTPUT", str(Path(os.getenv("APP_DATA_DIR", "/app/data")) / "bollywood_tmdb_updated_metadata.json")))
     today = date.today().isoformat()

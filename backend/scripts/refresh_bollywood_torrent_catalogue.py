@@ -18,9 +18,11 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
-import main
+BASE_DIR = Path(__file__).resolve().parents[1]
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-BASE_DIR = Path(__file__).resolve().parent
+import main
 METADATA_PATH = Path(os.getenv(
     "BOLLYWOOD_METADATA_CATALOGUE_PATH",
     str(Path(os.getenv("APP_DATA_DIR", "/app/data")) / "bollywood_tmdb_updated_metadata.json"),

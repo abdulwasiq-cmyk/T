@@ -1,0 +1,1 @@
+"""Torrent search, metadata, and compatibility endpoints."""

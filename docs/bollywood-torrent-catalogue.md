@@ -8,10 +8,10 @@ Run these commands after the image containing `refresh_bollywood_metadata.py` is
 
 ```sh
 # 1. Build the Hindi/India-origin feature-film metadata snapshot using configured TMDB credentials.
-docker exec home python /app/refresh_bollywood_metadata.py
+docker exec home python /app/scripts/refresh_bollywood_metadata.py
 
 # 2. Search the first bounded batch of movie titles and publish size-filtered matches.
-docker exec home python /app/refresh_bollywood_torrent_catalogue.py
+docker exec home python /app/scripts/refresh_bollywood_torrent_catalogue.py
 
 # 3. Confirm the cached library API responds with matched records.
 curl -sS 'http://127.0.0.1:10000/api/movies/catalogue/bollywood-library?page=1&released_only=true&max_size_gb=5'
