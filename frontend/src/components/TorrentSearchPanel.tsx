@@ -89,7 +89,7 @@ function cataloguePosterSource(movie: { title?: string; year?: number | string |
   return '/api/poster?' + params.toString();
 }
 
-type MovieOttCardState = MovieOttAvailability | { status: 'loading' | 'error'; message?: string };
+type MovieOttCardState = MovieOttAvailability | { status: 'loading'; message?: string } | { status: 'error'; message?: string };
 
 type NexStreamEpisode = { episodeNumber: number; name: string; overview: string; airDate: string; still: string | null };
 type NexStreamSeason = { seasonNumber: number; name: string; episodeCount: number };
@@ -583,7 +583,7 @@ function displayOttProviderName(name: string): string {
     .trim();
 }
 
-function uniqueOttProviders<T extends { name: string; type?: string; webUrl?: string; providerId?: number | string }>(providers: T[]): T[] {
+function uniqueOttProviders<T extends { name: string; type?: string; webUrl?: string; providerId?: number | string | null }>(providers: T[]): T[] {
   const unique = new Map<string, T>();
   providers.forEach(provider => {
     const key = normalizeOttProviderName(provider.name);
@@ -1010,7 +1010,7 @@ export const TorrentSearchPanel: React.FC<TorrentSearchPanelProps> = ({ onPrepar
   const nexStreamSearchControllerRef = useRef<AbortController | null>(null);
   const nexStreamSearchGenerationRef = useRef(0);
   const [nexStreamError, setNexStreamError] = useState('');
-  const [nexStreamPlayer, setNexStreamPlayer] = useState<{ title: string; sourceName: string; url: string; type: 'movie' | 'tv'; season?: number; episode?: number } | null>(null);
+  const [nexStreamPlayer, setNexStreamPlayer] = useState<{ title: string; year?: string; sourceName: string; url: string; type: 'movie' | 'tv'; season?: number; episode?: number } | null>(null);
   const [nexStreamResolvingId, setNexStreamResolvingId] = useState<string | null>(null);
   const [searchMetadata, setSearchMetadata] = useState<SearchMediaMetadata[]>(readPersistentSearchMetadata);
   const [searchMetadataStatus, setSearchMetadataStatus] = useState<'idle' | 'loading' | 'ready' | 'not_found' | 'unavailable'>('idle');
@@ -2891,7 +2891,7 @@ export const TorrentSearchPanel: React.FC<TorrentSearchPanelProps> = ({ onPrepar
         ...group,
         posterResult: {
           ...group.posterResult,
-          posterUrl: group.posterResult?.posterUrl || movie.posterUrl || null,
+          posterUrl: group.posterResult?.posterUrl || movie.posterUrl || undefined,
           mediaTitle: group.posterResult?.mediaTitle || movie.title,
           tmdbId: group.posterResult?.tmdbId || movie.tmdbId || movie.id,
           id: group.posterResult?.id || movie.tmdbId || movie.id,
@@ -3083,7 +3083,7 @@ export const TorrentSearchPanel: React.FC<TorrentSearchPanelProps> = ({ onPrepar
           ...group,
           posterResult: {
             ...group.posterResult,
-            posterUrl: group.posterResult?.posterUrl || movie.posterUrl || null,
+            posterUrl: group.posterResult?.posterUrl || movie.posterUrl || undefined,
             mediaTitle: group.posterResult?.mediaTitle || movie.title,
             tmdbId: group.posterResult?.tmdbId || movie.tmdbId || movie.id,
             id: group.posterResult?.id || movie.tmdbId || movie.id,

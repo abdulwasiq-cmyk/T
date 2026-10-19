@@ -20,6 +20,9 @@ export interface TorrentSearchResult {
   genres?: string[];
   posterUrl?: string;
   quality?: string;
+  // Set on catalogue-derived poster results.
+  tmdbId?: number | string | null;
+  id?: number | string | null;
 }
 
 
@@ -1108,7 +1111,7 @@ export const api = {
   async getSeedrFolderContents(folderId: string): Promise<{
     configured: boolean;
     folderId: string;
-    files: Array<{ id: string; streamId?: string; name: string; size: number; folderId: string; url?: string | null }>;
+    files: Array<{ id: string; streamId?: string; name: string; size: number; folderId: string; folderPath: string; url?: string | null }>;
     folders: Array<{ id: string; folderId: string; name: string }>;
   }> {
     const res = await apiFetch('/api/seedr/folders/' + encodeURIComponent(folderId) + '/contents');
@@ -1119,7 +1122,12 @@ export const api = {
     return {
       configured: Boolean(data?.configured),
       folderId: String(data?.folderId || folderId),
-      files: Array.isArray(data?.files) ? data.files : [],
+      // The backend does not send folderPath for folder contents; default it so
+      // the value matches the declared type.
+      files: (Array.isArray(data?.files) ? data.files : []).map((file: any) => ({
+        ...file,
+        folderPath: String(file?.folderPath ?? ''),
+      })),
       folders: Array.isArray(data?.folders) ? data.folders : [],
     };
   },
@@ -1154,7 +1162,7 @@ export const api = {
     return data;
   },
 
-  async getSeedrFileStream(fileId: string, fileName: string, type: 'video' | 'audio'): Promise<{ url: string; externalUrl?: string; name: string }> {
+  async getSeedrFileStream(fileId: string, fileName: string, type: 'video' | 'audio'): Promise<{ url: string; externalUrl?: string; name: string; resolvedFileId?: string }> {
     const params = new URLSearchParams({
       type,
       file_id: fileId,

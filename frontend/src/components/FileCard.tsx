@@ -23,7 +23,7 @@ import { formatBytes, formatTimeAgo } from '../utils/formatters.ts';
 interface FileCardProps {
   file: StorageFile;
   onPlay: (file: StorageFile) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
   onRename: (file: StorageFile) => void;
   onMove: (file: StorageFile) => void;
   canEdit?: boolean;
@@ -45,6 +45,14 @@ export const FileCard: React.FC<FileCardProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+
+  const handleDelete = () => {
+    if (file.ownerId === 'seedr' && onSeedrDelete) {
+      void onSeedrDelete(file);
+    } else {
+      onDelete?.(file.id);
+    }
+  };
 
   const copyLink = async () => {
     try {
@@ -144,13 +152,7 @@ export const FileCard: React.FC<FileCardProps> = ({
         {canDelete && (
           <button
             type="button"
-            onClick={() => {
-              if (file.ownerId === 'seedr' && onSeedrDelete) {
-                void onSeedrDelete(file);
-              } else {
-                onDelete(file.id);
-              }
-            }}
+            onClick={handleDelete}
             className="p-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition tap-target flex items-center justify-center"
             title="Delete File"
             aria-label="Delete File"
@@ -209,7 +211,7 @@ export const FileCard: React.FC<FileCardProps> = ({
                         type="button"
                         onClick={() => {
                           setShowMenu(false);
-                          onDelete(file.id);
+                          handleDelete();
                         }}
                         className="w-full px-3 py-2 text-left hover:bg-rose-500/10 text-rose-400 flex items-center gap-2 border-t border-slate-800"
                       >

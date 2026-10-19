@@ -212,6 +212,7 @@ export default function App() {
     ready?: boolean;
     error?: string;
     jobId?: string;
+    hash?: string;
   } | null>(null);
   const [backgroundMetadataJobs, setBackgroundMetadataJobs] = useState<BackgroundMetadataJobRecord[]>([]);
   const [backgroundMetadataLoading, setBackgroundMetadataLoading] = useState(false);
@@ -342,6 +343,8 @@ export default function App() {
       available?: boolean;
     }>;
     seedrReply: string;
+    selectionApplied?: boolean;
+    selectionError?: string | null;
   };
 
   const seedrNoticeStorageKey = 'seedflow_seedr_notice';
@@ -564,7 +567,7 @@ export default function App() {
     const groups: SeedrFolderGroup[] = seedrLibraryFolders.map(folder => {
       const folderId = folder.folderId || folder.id;
       const savedTorrentName = seedrTorrentNames[folderId];
-      const torrentName = String(folder.torrentName || savedTorrentName || '').trim();
+      const torrentName = String((folder as { torrentName?: string }).torrentName || savedTorrentName || '').trim();
       return {
       folderId,
       name: torrentName || folder.name,
@@ -1140,7 +1143,7 @@ export default function App() {
     () => torrents.some(t =>
       t.state === 'downloading' ||
       t.state === 'pausedDL' ||
-      t.state === 'queuedDL' ||
+      (t.state as string) === 'queuedDL' ||
       t.progress < 1
     ),
     [torrents]
@@ -1173,7 +1176,7 @@ export default function App() {
         });
 
         const now = Date.now();
-        const reconciledTorrentList = torrentList.map(t => {
+        const reconciledTorrentList = torrentList.map((t): TorrentItem => {
           const pending = pendingTransferStates.current[t.hash];
           if (!pending) return t;
 
@@ -1325,8 +1328,8 @@ export default function App() {
     // stale task left behind after a page refresh. Reject the older UI waiter
     // so its card stops spinning, without treating that cancellation as an
     // error for the newly selected torrent.
-    const cancelledTaskIds = new Set(
-      (Array.isArray(prepared?.cancelledTasks) ? prepared.cancelledTasks : [])
+    const cancelledTaskIds = new Set<string>(
+      ((Array.isArray(prepared?.cancelledTasks) ? prepared.cancelledTasks : []) as any[])
         .map((task: any) => String(task?.taskId ?? task?.task_id ?? task?.id ?? '').trim())
         .filter(Boolean)
     );
@@ -1344,8 +1347,8 @@ export default function App() {
     // room for the new torrent. Remove those folders from every local cache
     // immediately so Search cannot keep showing stale Play/Download/Copy
     // buttons for files that no longer exist in Seedr.
-    const deletedFolderIds = Array.from(new Set(
-      (Array.isArray(prepared?.deletedFolders) ? prepared.deletedFolders : [])
+    const deletedFolderIds = Array.from(new Set<string>(
+      ((Array.isArray(prepared?.deletedFolders) ? prepared.deletedFolders : []) as any[])
         .map((folder: any) => String(folder?.folder_id ?? folder?.folderId ?? folder?.id ?? '').trim())
         .filter(Boolean)
     ));
@@ -1631,7 +1634,7 @@ export default function App() {
           console.warn('Torrent added, but storage stats could not be refreshed yet:', refreshError)
         );
 
-      setActiveTab(result.backend === 'seedr' ? 'files' : 'transfers');
+      setActiveTab('files');
     } catch (error: any) {
       if (error?.code === 'SEEDR_INSUFFICIENT_SPACE') {
         let required = Number(error.requiredBytes || requiredBytes || 0);
@@ -2936,7 +2939,7 @@ export default function App() {
                 </div>
                 <button
                   type="button"
-                  onClick={loadSeedrLibrary}
+                  onClick={() => { void loadSeedrLibrary(true); }}
                   disabled={seedrLoading}
                   className="shrink-0 px-2 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition"
                 >
