@@ -1552,6 +1552,7 @@ export default function App() {
 
         setSeedrNotice({
           taskId: result.seedrTaskId ?? null,
+          folderId: returnedFolderId,
           name: String(torrentName || '').trim() || (() => {
             const response: any = result.seedrResponse;
             const responseName = String(

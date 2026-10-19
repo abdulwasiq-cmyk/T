@@ -21,6 +21,7 @@ export interface TorrentSearchResult {
   posterUrl?: string;
   quality?: string;
   // Set on catalogue-derived poster results.
+  overview?: string;
   tmdbId?: number | string | null;
   id?: number | string | null;
 }
