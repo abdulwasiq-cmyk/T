@@ -134,3 +134,62 @@ def test_feedback_global_rate_limit(client, feedback_env, monkeypatch):
     monkeypatch.setattr(main, "FEEDBACK_GLOBAL_RATE_LIMIT", 1)
     assert _feedback(client, ip="203.0.113.1").status_code == 200
     assert _feedback(client, ip="203.0.113.2").status_code == 429
+
+
+# --- Seedr session persistence -------------------------------------------------
+# The whole session (including the Seedr tokens) lives in an encrypted cookie, so
+# wiping the in-memory table, which is what a backend restart does, must not
+# log anyone out as long as SEEDR_SESSION_SECRET stays the same.
+
+
+def test_session_cookie_round_trip_survives_restart():
+    session_id, session = main._seedr_new_session()
+    session["access_token"] = "accessTokenABC123"
+    session["refresh_token"] = "refreshTokenXYZ789"
+    session["auth_mode"] = "pat"
+    cookie = main._seedr_session_cookie_value(session_id, session)
+
+    main._seedr_sessions.clear()  # simulate a process restart
+    restored = main._seedr_restore_session(cookie)
+
+    assert restored is not None
+    restored_id, restored_session = restored
+    assert restored_id == session_id
+    assert restored_session["csrf_token"] == session["csrf_token"]
+    assert restored_session["access_token"] == "accessTokenABC123"
+    assert restored_session["refresh_token"] == "refreshTokenXYZ789"
+    assert restored_session["auth_mode"] == "pat"
+
+
+def test_session_cookie_does_not_contain_plaintext_tokens():
+    session_id, session = main._seedr_new_session()
+    session["access_token"] = "accessTokenABC123"
+    cookie = main._seedr_session_cookie_value(session_id, session)
+    assert "accessTokenABC123" not in cookie
+
+
+def test_tampered_session_cookie_is_rejected():
+    session_id, session = main._seedr_new_session()
+    cookie = main._seedr_session_cookie_value(session_id, session)
+    tampered = cookie[:-4] + ("AAAA" if not cookie.endswith("AAAA") else "BBBB")
+    assert main._seedr_restore_session(tampered) is None
+    assert main._seedr_restore_session("not-a-session-cookie") is None
+
+
+def test_expired_session_cookie_is_rejected(monkeypatch):
+    session_id, session = main._seedr_new_session()
+    cookie = main._seedr_session_cookie_value(session_id, session)
+    monkeypatch.setattr(main, "SEEDR_SESSION_TTL_SECONDS", -1)
+    assert main._seedr_restore_session(cookie) is None
+
+
+def test_csrf_token_survives_backend_restart(anonymous_client, feedback_env):
+    csrf = anonymous_client.get("/api/seedr/session").json()["csrfToken"]
+    main._seedr_sessions.clear()  # simulate a process restart
+
+    response = anonymous_client.post(
+        "/api/feedback",
+        json={"type": "bug", "message": "Still logged in after a restart"},
+        headers={"X-Torrent-Studio-CSRF": csrf},
+    )
+    assert response.status_code == 200
